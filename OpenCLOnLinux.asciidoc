@@ -1,1 +1,118 @@
-= OpenCL On Linux
+= OpenCL on Linux
+
+OpenCL on Linux works great!
+But, it involves a number of components, which means setting up OpenCL on Linux can be challenging, and debugging installation issues can be particularly challenging.
+This guide is written to describe how OpenCL on Linux works, where different OpenCL components on Linux may come from, and to provide initial troubleshooting steps when OpenCL on Linux is not working as expected.
+
+== How OpenCL on Linux Works
+
+OpenCL on Linux usually works in one of two ways:
+
+1. *Installable Client Drivers* (ICDs)
+1. *Direct Linking*
+
+These two methods are described in detail below.
+
+=== OpenCL ICDs on Linux
+
+The *Installable Client Driver* (ICD) method is most common on desktop installations.
+When using the *Installable Client Driver* method, applications link against an *Installable Client Driver* loader (ICD loader), instead of linking directly to a specific OpenCL implementation.
+The ICD loader is then responsible for enumerating all of the OpenCL implementations that are installed on the system.
+The application may then choose to run on any of the OpenCL implementations on the system.
+
+image::OpenCL-ICDs.png[]
+
+Note that because the application links against the ICD loader, the *Installable Client Driver* method allows an application to target many different OpenCL implementations, including those that were not even available when the application was developed.
+
+OpenCL implementations do not need to support the *Installable Client Driver* interfaces to be conformant.
+Instead, the *Installable Client Driver* interface is described by the extension `cl_khr_icd`.
+
+==== OpenCL ICD / ICD Loader Details
+
+The spec for the `cl_khr_icd` extension may be found https://www.khronos.org/registry/OpenCL/specs/2.2/html/OpenCL_Ext.html#cl_khr_icd-opencl[here].
+
+OpenCL implementations that implement OpenCL ICD interfaces will return `cl_khr_icd` in their `CL_PLATFORM_EXTENSIONS` string.
+
+The only functions that an OpenCL implementation must export to work with the OpenCL ICD loader are `clGetExtensionFunctionAddress` and `clIcdGetPlatformIDsKHR`.
+
+----
+$ nm -D --defined-only libAnOpenCLImplementation.so
+000000000002b500 T clGetExtensionFunctionAddress
+0000000000026d30 T clIcdGetPlatformIDsKHR
+----
+
+There are two commonly used ICD loaders.
+Both ICD loaders are open source:
+
+1. ocl-icd: https://github.com/OCL-dev/ocl-icd
+1. Khronos OpenCL-ICD-Loader: https://github.com/khronosgroup/opencl-icd-loader
+
+You'll usually get the ICD loader from your Linux distribution, although some OpenCL implementations will distribute an ICD loader, and you can always build your own ICD loader.
+It's OK to have more than one ICD loader installed on your system, but there's no reason to need more than one ICD loader either, since the ICD loader is not vendor-specific.
+
+You will need to use an ICD loader that is at least as new as the OpenCL APIs you'd like to use, since an earlier ICD loader will not export the newer APIs.
+The ICD loader is backwards compatible, however, so it's fine to use a "newer" ICD loader, even if an OpenCL implementation only supports "older" APIs.
+
+The ICD loader is almost always named `libOpenCL.so`, and `libOpenCL.so` is most likely a symbolic link to another file, which may itself be a symbolic link to yet another file.
+The reasons for this are described http://tldp.org/HOWTO/Program-Library-HOWTO/shared-libraries.html[here].
+Note that the final ICD loader may be named `libOpenCL.so.1.2`, though the `1.2` is the ICD loader version, and is unrelated to the version of the OpenCL APIs supported by the ICD loader.
+
+The ICD loader exports all of the OpenCL API functions.
+
+----
+$ nm -D --defined-only libOpenCL.so.1.2
+00000000000191c0 T clBuildProgram
+000000000003ec10 T clCloneKernel
+00000000000199a0 T clCompileProgram
+0000000000011c50 T clCreateBuffer
+...
+----
+
+The ICD loader enumerates the OpenCL implementations that are installed on the system by looking for files in the directory `/etc/OpenCL/vendors`.
+The ICD loader will open each file in this directory that ends with `.icd`, and read a single line of text from the file.
+The single line of text is interpreted as the full path to the OpenCL implementation shared library.
+
+=== Direct Linking on Linux
+
+The *Direct Linking* method is less common, but is occasionally used in mobile or embedded applications that target a specific hardware configuration.
+When using the *Direct Linking* method, applications link against a specific OpenCL implementation, rather than a generic OpenCL loader.
+
+image::OpenCL-DirectLinking.png[]
+
+Note that this method only enumerates the platforms supported by the one implementation that the application linked against, regardless of the number of OpenCL implementations installed on the system.
+
+To support *Direct Linking*, the OpenCL implementation must export all of the APIs required by the application:
+
+----
+$ nm -D --defined-only libAnOpenCLImplementation.so
+000000000004bd50 T clBuildProgram
+000000000007cd20 T clCloneKernel
+0000000000044720 T clCompileProgram
+00000000000699b0 T clCreateBuffer
+....
+----
+
+=== Supporting Both Models?
+
+If an OpenCL implementation wants to support both applications that link with the ICD loader and applications that link with it directly, it may do so by exporting all of the core OpenCL API functions in addition to the functions required by the ICD loader:
+
+----
+$ nm -D --defined-only libSupportsBothModels.so
+000000000004bd50 T clBuildProgram
+000000000007cd20 T clCloneKernel
+....
+0000000000052540 T clGetExtensionFunctionAddress
+....
+0000000000026d30 T clIcdGetPlatformIDsKHR
+....
+----
+
+== Troubleshooting OpenCL on Linux
+
+TBD!
+
+---
+
+OpenCL and the OpenCL logo are trademarks of Apple Inc. used by permission by Khronos.
+
+\* Other names and brands may be claimed as the property of others.
