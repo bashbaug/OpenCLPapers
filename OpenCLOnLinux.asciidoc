@@ -1,8 +1,9 @@
 = OpenCL on Linux
+:imagesdir: ./images
 
 OpenCL on Linux works great!
-But, it involves a number of components, which means setting up OpenCL on Linux can be challenging, and debugging installation issues can be particularly challenging.
-This guide is written to describe how OpenCL on Linux works, where different OpenCL components on Linux may come from, and to provide initial troubleshooting steps when OpenCL on Linux is not working as expected.
+But, it involves a number of components, so setting up OpenCL on Linux can be challenging, and debugging installation issues can be particularly challenging.
+This guide describes how OpenCL on Linux works, where OpenCL components on Linux may come from, and initial troubleshooting steps when OpenCL on Linux is not working as expected.
 
 == How OpenCL on Linux Works
 
@@ -15,10 +16,10 @@ These two methods are described in detail below.
 
 === OpenCL ICDs on Linux
 
-The *Installable Client Driver* (ICD) method is most common on desktop installations.
+The *Installable Client Driver* (ICD) method is common on desktop installations.
 When using the *Installable Client Driver* method, applications link against an *Installable Client Driver* loader (ICD loader), instead of linking directly to a specific OpenCL implementation.
-The ICD loader is then responsible for enumerating all of the OpenCL implementations that are installed on the system.
-The application may then choose to run on any of the OpenCL implementations on the system.
+The ICD loader is responsible for enumerating all of the OpenCL implementations that are installed on the system.
+The application may then choose to run on any of the OpenCL implementations on the system, or may fail gracefully if no suitable implementation is found.
 
 image::OpenCL-ICDs.png[]
 
@@ -53,7 +54,8 @@ It's OK to have more than one ICD loader installed on your system, but there's n
 You will need to use an ICD loader that is at least as new as the OpenCL APIs you'd like to use, since an earlier ICD loader will not export the newer APIs.
 The ICD loader is backwards compatible, however, so it's fine to use a "newer" ICD loader, even if an OpenCL implementation only supports "older" APIs.
 
-The ICD loader is almost always named `libOpenCL.so`, and `libOpenCL.so` is most likely a symbolic link to another file, which may itself be a symbolic link to yet another file.
+The ICD loader is almost always named `libOpenCL.so`.
+`libOpenCL.so` is most likely a symbolic link to another file, which may itself be a symbolic link to yet another file.
 The reasons for this are described http://tldp.org/HOWTO/Program-Library-HOWTO/shared-libraries.html[here].
 Note that the final ICD loader may be named `libOpenCL.so.1.2`, though the `1.2` is the ICD loader version, and is unrelated to the version of the OpenCL APIs supported by the ICD loader.
 
@@ -70,9 +72,9 @@ $ nm -D --defined-only libOpenCL.so.1.2
 
 The ICD loader enumerates the OpenCL implementations that are installed on the system by looking for files in the directory `/etc/OpenCL/vendors`.
 The ICD loader will open each file in this directory that ends with `.icd`, and read a single line of text from the file.
-The single line of text is interpreted as the full path to the OpenCL implementation shared library.
+The single line of text is interpreted as the full path to the OpenCL implementation shared library, which is then loaded by the ICD loader.
 
-=== Direct Linking on Linux
+=== Direct Linking
 
 The *Direct Linking* method is less common, but is occasionally used in mobile or embedded applications that target a specific hardware configuration.
 When using the *Direct Linking* method, applications link against a specific OpenCL implementation, rather than a generic OpenCL loader.
@@ -109,10 +111,60 @@ $ nm -D --defined-only libSupportsBothModels.so
 
 == Troubleshooting OpenCL on Linux
 
-TBD!
+This section describes basic troubleshooting steps that apply to all Linux distributions and all OpenCL implementations.
+
+=== Step 1: Do you have libOpenCL.so?
+
+The first thing to check is to ensure you have a `libOpenCL.so` on your system, and to verify that your application knows how to find it.
+The `ldd` utility (or `objdump -p`) can usually perform this check:
+
+----
+$ ldd /path/to/your/application | grep OpenCL
+	libOpenCL.so.1 => /path/to/your/libOpenCL.so.1 (0x00007f9182d27000)
+----
+
+If you see a full path to `libOpenCL.so` listed, as shown above, then you have a `libOpenCL.so` on your system, and your application knows how to find it - go to Step 2.
+If you see `libOpenCL.so` listed, but you see `not found` instead of a path name, then you either don't have a `libOpenCL.so` on your system, or your application can't find it.
+
+If you don't see `libOpenCL.so` listed at all, this could be caused by several reasons, but most likely your application is dynamically loading a `libOpenCL.so` or another library that uses OpenCL.
+I'd still check that `libOpenCL.so` is properly installed in this case.
+
+==== Installing and Finding libOpenCL.so
+
+This section decribes possible resolutions to `libOpenCL.so` being `not found`.
+
+First, check if a `libOpenCL.so` exists on your system.
+There are many ways to do this, some which will be dependent on your particular Linux distribution or configuration, especially whether you are using an *Installable Client Drivers* or *Direct Linking*.
+
+The `locate` or `find` commands may be helpful: `locate libOpenCL.so`.
+If you are using one, your package manager may be also helpful: start by searching for packages similar to `ocl-icd`, or `OpenCL`, or `ICD` for the *Installable Client Driver* method, or for your target OpenCL implementation for the *Direct Linking* method.
+
+If you don't have a `libOpenCL.so` then you'll need to install it.
+Again, the method to do this will be dependent on your Linux Distribution or configuration.
+Remember though: unless you are using the *Direct Linking* method, your `libOpenCL.so` will be the ICD loader, and not a partcular OpenCL implementation!
+
+If you have verified that a `libOpenCL.so` exists on your system, but you still see `not found` instead of a path to your `libOpenCL.so`, then the dynamic linker does not know how to find your `libOpenCL.so`.
+Here are a few possble solutions to this problem:
+
+. You may need to update your `ldconfig` cache file.
+You can check if `libOpenCL.so` is in your cache by running `ldconfig -p | grep OpenCL`.
+If `libOpenCL.so` is not in your cache file, you can run `ldconfig` to add it, but this will require root access.
+If you install `libOpenCL.so` from a package, this step will likely be done by your package manager.
+. You can use the `LD_LIBRARY_PATH` environment variable to specify the directory containing `libOpenCL.so`.
+. You can use the `LD_PRELOAD` environment variable to preload your `libOpenCL.so` (this is uncommon).
+
+After following these steps your application should be able to run and make OpenCL API calls, such as to `clGetPlatformIDs`.
+
+=== Step 2: Do You Have An OpenCL Implementation?
+
+TODO
 
 ---
+Written by Ben Ashbaugh
+
+This work is licensed under a Creative Commons Attribution 4.0 International License;
+see http://creativecommons.org/licenses/by/4.0/
 
 OpenCL and the OpenCL logo are trademarks of Apple Inc. used by permission by Khronos.
 
-\* Other names and brands may be claimed as the property of others.
+* Other names and brands may be claimed as the property of others.
