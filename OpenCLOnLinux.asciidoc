@@ -14,7 +14,7 @@ OpenCL on Linux usually works in one of two ways:
 
 These two methods are described in detail below.
 
-=== OpenCL ICDs on Linux
+=== OpenCL Installable Client Drivers on Linux
 
 The *Installable Client Driver* (ICD) method is common on desktop installations.
 When using the *Installable Client Driver* method, applications link against an *Installable Client Driver* loader (ICD loader), instead of linking directly to a specific OpenCL implementation.
@@ -113,7 +113,7 @@ $ nm -D --defined-only libSupportsBothModels.so
 
 This section describes basic troubleshooting steps that apply to all Linux distributions and all OpenCL implementations.
 
-=== Step 1: Do you have libOpenCL.so?
+=== Step 1: Do you have `libOpenCL.so`?
 
 The first thing to check is to ensure you have a `libOpenCL.so` on your system, and to verify that your application knows how to find it.
 The `ldd` utility (or `objdump -p`) can usually perform this check:
@@ -129,9 +129,9 @@ If you see `libOpenCL.so` listed, but you see `not found` instead of a path name
 If you don't see `libOpenCL.so` listed at all, this could be caused by several reasons, but most likely your application is dynamically loading a `libOpenCL.so` or another library that uses OpenCL.
 I'd still check that `libOpenCL.so` is properly installed in this case.
 
-==== Installing and Finding libOpenCL.so
+==== Installing and Finding `libOpenCL.so`
 
-This section decribes possible resolutions to `libOpenCL.so` being `not found`.
+This section describes possible resolutions to `libOpenCL.so` being `not found`.
 
 First, check if a `libOpenCL.so` exists on your system.
 There are many ways to do this, some which will be dependent on your particular Linux distribution or configuration, especially whether you are using an *Installable Client Drivers* or *Direct Linking*.
@@ -141,14 +141,14 @@ If you are using one, your package manager may be also helpful: start by searchi
 
 If you don't have a `libOpenCL.so` then you'll need to install it.
 Again, the method to do this will be dependent on your Linux Distribution or configuration.
-Remember though: unless you are using the *Direct Linking* method, your `libOpenCL.so` will be the ICD loader, and not a partcular OpenCL implementation!
+Remember though: unless you are using the *Direct Linking* method, your `libOpenCL.so` will be the ICD loader, and not a particular OpenCL implementation!
 
 If you have verified that a `libOpenCL.so` exists on your system, but you still see `not found` instead of a path to your `libOpenCL.so`, then the dynamic linker does not know how to find your `libOpenCL.so`.
-Here are a few possble solutions to this problem:
+Here are a few possible solutions to this problem:
 
 . You may need to update your `ldconfig` cache file.
 You can check if `libOpenCL.so` is in your cache by running `ldconfig -p | grep OpenCL`.
-If `libOpenCL.so` is not in your cache file, you can run `ldconfig` to add it, but this will require root access.
+If `libOpenCL.so` is not in your cache file, running `ldconfig` may add it, but this will require root access.
 If you install `libOpenCL.so` from a package, this step will likely be done by your package manager.
 . You can use the `LD_LIBRARY_PATH` environment variable to specify the directory containing `libOpenCL.so`.
 . You can use the `LD_PRELOAD` environment variable to preload your `libOpenCL.so` (this is uncommon).
@@ -157,7 +157,130 @@ After following these steps your application should be able to run and make Open
 
 === Step 2: Do You Have An OpenCL Implementation?
 
-TODO
+This section assumes that you have a `libOpenCL.so` on your system and that your application knows how to find it.
+This means that you are able to make OpenCL API calls, such as to `clGetPlatformIDs`, but you either aren't seeing any OpenCL implementations (`platforms`) on your system, or aren't seeing one of the platforms you are expecting to see.
+
+This section primarily discusses troubleshooting issues with the *Installable Client Driver* method, since the *Direct Linking* method will be directly calling into an OpenCL implementation.
+Recall that with the *Installable Client Driver* method, `libOpenCL.so` is actually an ICD loader, which is responsible for enumerating the OpenCL implementations installed on the system.
+
+==== Step 2a: Is your OpenCL implementation in `/etc/OpenCL/vendors`?
+
+If you aren't seeing the OpenCL implementations you are expecting to see on your system, the first thing to check is whether the OpenCL implementation is setup so the ICD loader can find it.
+You can do this by examining the contents of `/etc/OpenCL/vendors`:
+
+----
+$ ls -l /etc/OpenCL/vendors/
+total 8
+lrwxrwxrwx 1 root root 42 Jul 30  2018 vendor.icd -> /etc/alternatives/opencl-vendor-runtime-icd
+-rw-r--r-- 1 root root 63 Feb 11 22:39 stub.icd
+----
+
+Each OpenCL implementation should have its own file in this directory, with a `.icd` file extension.
+The file is probably labeled according to the vendor that provided the OpenCL implementation, but it doesn't have to.
+If you don't see a file corresponding to your OpenCL implementation, or it doesn't end with a `.icd` file extension, then the ICD loader will not know how to load your OpenCL implementation!
+
+==== Step 2b: Is the file for your OpenCL implementation readable?
+
+If you see a file corresponding to your OpenCL implementation, the next step is to ensure that it is readable.
+If it is not readable by the user running the OpenCL application, then the ICD loader will not be able to open the file to find the OpenCL implementation.
+It's very unlikely that an installer will setup permissions on the file incorrectly, it's a good idea to check to be sure.
+
+==== Step 2c: Are the contents of the file for your OpenCL implementation correct?
+
+If you see a file corresponding to your OpenCL implementation, and the file is readable, the next step is to ensure that the contents of the file are correct.
+The file for each OpenCL implementation should consist of a single line describing where to find the shared library for the OpenCL implementation.
+The contents of the file is passed as-is to `dlopen`.
+This means that the file should contain a single line, with no trailing whitespace, including newline characters.
+In most cases, the contents of the file will be a full path the shared library for an OpenCL implementation, for example:
+
+----
+$ more vendor.icd
+/opt/vendor/opencl-1.2-X.Y.Z.W/lib64/libvendorocl.so
+----
+
+It's possible that the contents of the file will simply be the name of the shared library for an OpenCL implementation, for example:
+
+----
+$ more stub.icd
+libOpenCLDriverStub.so
+----
+
+This can work, but you may need to take additional steps to ensure that `dlopen` can find the shared library.
+These additional steps are similar to the ones for `libOpenCL.so` described above.
+To summarize:
+
+. You may need to update your `ldconfig` cache file.
+If the shared library is not in your cache file, running `ldconfig` may add it, but this will require root access.
+. You can use the `LD_LIBRARY_PATH` environment variable to specify the directory containing the shared library for the OpenCL implementation.
+. You can use the `LD_PRELOAD` environment variable to preload your the shared library for the OpenCL implementation (this is uncommon).
+
+=== Using `strace` to Troubleshoot
+
+The Linux `strace` utility can be very helpful to troubleshoot OpenCL issues.
+Since this utility can produce a lot of output, you may want to redirect the output to a file, and start by troubleshooting a simple test case, such as `clinfo`.
+Here is an example command to run `strace` and redirect the output to a file:
+
+----
+$ strace ./my_opencl_application 2> trace.txt
+----
+
+You can then examine the output in `trace.txt`.
+Some things you may want to look for are:
+
+. Was `libOpenCL.so` correctly opened?
+If not, you will only see lines like this one:
++
+--
+----
+open("libOpenCL.so.1", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+----
+--
++
+If you eventually see a line like this one, `libOpenCL.so` was correctly opened:
++
+--
+----
+open("/usr/lib/x86_64-linux-gnu/libOpenCL.so.1", O_RDONLY|O_CLOEXEC) = 3
+----
+--
+
+. Was the ICD loader able to open and read your vendor file?
+If you see a line like this one, your vendor file was correctly opened:
++
+--
+----
+open("/etc/OpenCL/vendors/vendor.icd", O_RDONLY) = 4
+----
+--
+
+. Was the ICD loader able to open the shared library for the OpenCL implementation?
+If not, you will only see lines like this one.
+In this example, the vendor file did not contain a full path to the OpenCL implementation:
++
+--
+----
+open("libOpenCLDriverStub.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+----
+--
++
+If you see a line like this one, the shared library for the OpenCL implementation was correctly opened.
+In this example, the vendor file did not contain the full path to the OpenCL implementation, but the shared library for the OpenCL implementation was in `LD_LIBRARY_PATH`:
++
+--
+----
+open("/etc/OpenCL/vendors/stub.icd", O_RDONLY) = 4
+...
+read(4, "libOpenCLDriverStub.so\n", 23) = 23
+...
+open("/path/to/libOpenCLDriverStub.so", O_RDONLY|O_CLOEXEC) = 5
+----
+--
+
+If you've gotten this far, your application was able to find the ICD loader and the ICD loader was able to enumerate and load your vendor implementation.
+
+=== Other Things To Check
+
+This section may add additional troubleshooting steps for specific OpenCL implementations.
 
 ---
 Written by Ben Ashbaugh
