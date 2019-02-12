@@ -29,7 +29,7 @@ Instead, the *Installable Client Driver* interface is described by the extension
 
 #### OpenCL ICD / ICD Loader Details
 
-The spec for the `cl_khr_icd` extension may be found https://www.khronos.org/registry/OpenCL/specs/2.2/html/OpenCL_Ext.html#cl_khr_icd-opencl[here].
+The spec for the `cl_khr_icd` extension may be found [here](https://www.khronos.org/registry/OpenCL/specs/2.2/html/OpenCL_Ext.html#cl_khr_icd-opencl).
 
 OpenCL implementations that implement OpenCL ICD interfaces will return `cl_khr_icd` in their `CL_PLATFORM_EXTENSIONS` string.
 
@@ -55,7 +55,7 @@ The ICD loader is backwards compatible, however, so it's fine to use a "newer" I
 
 The ICD loader is almost always named `libOpenCL.so`.
 `libOpenCL.so` is most likely a symbolic link to another file, which may itself be a symbolic link to yet another file.
-The reasons for this are described http://tldp.org/HOWTO/Program-Library-HOWTO/shared-libraries.html[here].
+The reasons for this are described [here](http://tldp.org/HOWTO/Program-Library-HOWTO/shared-libraries.html).
 Note that the final ICD loader may be named `libOpenCL.so.1.2`, though the `1.2` is the ICD loader version, and is unrelated to the version of the OpenCL APIs supported by the ICD loader.
 
 The ICD loader exports all of the OpenCL API functions.
@@ -227,29 +227,36 @@ You can then examine the output in `trace.txt`.
 Some things you may want to look for are:
 
 1. Was `libOpenCL.so` correctly opened?
-If not, you will only see lines like this one:  
+If not, you will only see lines like this one:
+
   ````
   open("libOpenCL.so.1", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
-  ````  
-  If you eventually see a line like this one, `libOpenCL.so` was correctly opened:  
+  ````
+
+  If you eventually see a line like this one, `libOpenCL.so` was correctly opened:
+
   ````
   open("/usr/lib/x86_64-linux-gnu/libOpenCL.so.1", O_RDONLY|O_CLOEXEC) = 3
   ````
 
 1. Was the ICD loader able to open and read your vendor file?
-If you see a line like this one, your vendor file was correctly opened:  
+If you see a line like this one, your vendor file was correctly opened:
+
   ````
   open("/etc/OpenCL/vendors/vendor.icd", O_RDONLY) = 4
   ````
 
 1. Was the ICD loader able to open the shared library for the OpenCL implementation?
 If not, you will only see lines like this one.
-In this example, the vendor file did not contain a full path to the OpenCL implementation:  
+In this example, the vendor file did not contain a full path to the OpenCL implementation:
+
   ````
   open("libOpenCLDriverStub.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
-  ````  
+  ````
+
   If you see a line like this one, the shared library for the OpenCL implementation was correctly opened.
-  In this example, the vendor file did not contain the full path to the OpenCL implementation, but the shared library for the OpenCL implementation was in `LD_LIBRARY_PATH`:  
+  In this example, the vendor file did not contain the full path to the OpenCL implementation, but the shared library for the OpenCL implementation was in `LD_LIBRARY_PATH`:
+
   ````
   open("/etc/OpenCL/vendors/stub.icd", O_RDONLY) = 4
   ...
