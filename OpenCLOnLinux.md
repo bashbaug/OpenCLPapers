@@ -229,41 +229,41 @@ Some things you may want to look for are:
 1. Was `libOpenCL.so` correctly opened?
 If not, you will only see lines like this one:
 
-  ````
-  open("libOpenCL.so.1", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
-  ````
+    ````
+    open("libOpenCL.so.1", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+    ````
 
-  If you eventually see a line like this one, `libOpenCL.so` was correctly opened:
+    If you eventually see a line like this one, `libOpenCL.so` was correctly opened:
 
-  ````
-  open("/usr/lib/x86_64-linux-gnu/libOpenCL.so.1", O_RDONLY|O_CLOEXEC) = 3
-  ````
+    ````
+    open("/usr/lib/x86_64-linux-gnu/libOpenCL.so.1", O_RDONLY|O_CLOEXEC) = 3
+    ````
 
 1. Was the ICD loader able to open and read your vendor file?
 If you see a line like this one, your vendor file was correctly opened:
 
-  ````
-  open("/etc/OpenCL/vendors/vendor.icd", O_RDONLY) = 4
-  ````
+    ````
+    open("/etc/OpenCL/vendors/vendor.icd", O_RDONLY) = 4
+    ````
 
 1. Was the ICD loader able to open the shared library for the OpenCL implementation?
 If not, you will only see lines like this one.
 In this example, the vendor file did not contain a full path to the OpenCL implementation:
 
-  ````
-  open("libOpenCLDriverStub.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
-  ````
+    ````
+    open("libOpenCLDriverStub.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+    ````
 
-  If you see a line like this one, the shared library for the OpenCL implementation was correctly opened.
-  In this example, the vendor file did not contain the full path to the OpenCL implementation, but the shared library for the OpenCL implementation was in `LD_LIBRARY_PATH`:
+    If you see a line like this one, the shared library for the OpenCL implementation was correctly opened.
+    In this example, the vendor file did not contain the full path to the OpenCL implementation, but the shared library for the OpenCL implementation was in `LD_LIBRARY_PATH`:
 
-  ````
-  open("/etc/OpenCL/vendors/stub.icd", O_RDONLY) = 4
-  ...
-  read(4, "libOpenCLDriverStub.so\n", 23) = 23
-  ...
-  open("/path/to/libOpenCLDriverStub.so", O_RDONLY|O_CLOEXEC) = 5
-  ````
+    ````
+    open("/etc/OpenCL/vendors/stub.icd", O_RDONLY) = 4
+    ...
+    read(4, "libOpenCLDriverStub.so\n", 23) = 23
+    ...
+    open("/path/to/libOpenCLDriverStub.so", O_RDONLY|O_CLOEXEC) = 5
+    ````
 
 If you've gotten this far, your application was able to find the ICD loader and the ICD loader was able to enumerate and load your vendor implementation.
 
