@@ -22,7 +22,7 @@ The application may then choose to run on any of the OpenCL implementations on t
 
 ![Installable Client Driver Diagram](./images/OpenCL-ICDs.png)
 
-Note that because the application links against the ICD loader, the *Installable Client Driver* method allows an application to target many different OpenCL implementations, including those that were not even available when the application was developed.
+Note that because the application links against the ICD loader, the *Installable Client Driver* method allows an application to target many different OpenCL implementations, including those that were unavailable when the application was developed.
 
 OpenCL implementations do not need to support the *Installable Client Driver* interfaces to be conformant.
 Instead, the *Installable Client Driver* interface is described by the extension `cl_khr_icd`.
@@ -33,12 +33,11 @@ The spec for the `cl_khr_icd` extension may be found [here](https://www.khronos.
 
 OpenCL implementations that implement OpenCL ICD interfaces will return `cl_khr_icd` in their `CL_PLATFORM_EXTENSIONS` string.
 
-The only functions that an OpenCL implementation must export to work with the OpenCL ICD loader are `clGetExtensionFunctionAddress` and `clIcdGetPlatformIDsKHR`.
+The only function that an OpenCL implementation must export to work with the OpenCL ICD loader is `clGetExtensionFunctionAddress`.
 
 ````
 $ nm -D --defined-only libAnOpenCLImplementation.so
 000000000002b500 T clGetExtensionFunctionAddress
-0000000000026d30 T clIcdGetPlatformIDsKHR
 ````
 
 There are two commonly used ICD loaders.
@@ -56,7 +55,7 @@ The ICD loader is backwards compatible, however, so it's fine to use a "newer" I
 The ICD loader is almost always named `libOpenCL.so`.
 `libOpenCL.so` is most likely a symbolic link to another file, which may itself be a symbolic link to yet another file.
 The reasons for this are described [here](http://tldp.org/HOWTO/Program-Library-HOWTO/shared-libraries.html).
-Note that the final ICD loader may be named `libOpenCL.so.1.2`, though the `1.2` is the ICD loader version, and is unrelated to the version of the OpenCL APIs supported by the ICD loader.
+Note that the final ICD loader may be named `libOpenCL.so.1.X`, though the `1.X` is the ICD loader version, and is unrelated to the version of the OpenCL APIs supported by the ICD loader.
 
 The ICD loader exports all of the OpenCL API functions.
 
@@ -71,7 +70,7 @@ $ nm -D --defined-only libOpenCL.so.1.2
 
 The ICD loader enumerates the OpenCL implementations that are installed on the system by looking for files in the directory `/etc/OpenCL/vendors`.
 The ICD loader will open each file in this directory that ends with `.icd`, and read a single line of text from the file.
-The single line of text is interpreted as the full path to the OpenCL implementation shared library, which is then loaded by the ICD loader.
+The single line of text describes the OpenCL implementation shared library, which is then loaded by the ICD loader.
 
 ### Direct Linking
 
@@ -104,8 +103,6 @@ $ nm -D --defined-only libSupportsBothModels.so
 ....
 0000000000052540 T clGetExtensionFunctionAddress
 ....
-0000000000026d30 T clIcdGetPlatformIDsKHR
-....
 ````
 
 ## Troubleshooting OpenCL on Linux
@@ -126,7 +123,7 @@ If you see a full path to `libOpenCL.so` listed, as shown above, then you have a
 If you see `libOpenCL.so` listed, but you see `not found` instead of a path name, then you either don't have a `libOpenCL.so` on your system, or your application can't find it.
 
 If you don't see `libOpenCL.so` listed at all, this could be caused by several reasons, but most likely your application is dynamically loading a `libOpenCL.so` or another library that uses OpenCL.
-I'd still check that `libOpenCL.so` is properly installed in this case.
+It is still a good idea to check that `libOpenCL.so` is properly installed in this case.
 
 #### Installing and Finding `libOpenCL.so`
 
@@ -146,7 +143,7 @@ If you have verified that a `libOpenCL.so` exists on your system, but you still 
 Here are a few possible solutions to this problem:
 
 1. You may need to update your `ldconfig` cache file.
-You can check if `libOpenCL.so` is in your cache by running `ldconfig -p | grep OpenCL`.
+You can check if `libOpenCL.so` is in your `ldconfig` cache by running `ldconfig -p | grep OpenCL`.
 If `libOpenCL.so` is not in your cache file, running `ldconfig` may add it, but this will require root access.
 If you install `libOpenCL.so` from a package, this step will likely be done by your package manager.
 1. You can use the `LD_LIBRARY_PATH` environment variable to specify the directory containing `libOpenCL.so`.
@@ -175,20 +172,20 @@ lrwxrwxrwx 1 root root 42 Jul 30  2018 vendor.icd -> /etc/alternatives/opencl-ve
 ````
 
 Each OpenCL implementation should have its own file in this directory, with a `.icd` file extension.
-The file is probably labeled according to the vendor that provided the OpenCL implementation, but it doesn't have to.
-If you don't see a file corresponding to your OpenCL implementation, or it doesn't end with a `.icd` file extension, then the ICD loader will not know how to load your OpenCL implementation!
+The file is probably labeled according to the vendor that provided the OpenCL implementation, but there are no labeling requirements.
+If you don't see a file corresponding to your OpenCL implementation, or it doesn't end with a `.icd` file extension, then the ICD loader will not know how to load your OpenCL implementation.
 
 #### Step 2b: Is the file for your OpenCL implementation readable?
 
 If you see a file corresponding to your OpenCL implementation, the next step is to ensure that it is readable.
 If it is not readable by the user running the OpenCL application, then the ICD loader will not be able to open the file to find the OpenCL implementation.
-It's very unlikely that an installer will setup permissions on the file incorrectly, it's a good idea to check to be sure.
+While it is very unlikely that an installer will setup permissions on the file incorrectly, it is a good idea to check to be sure.
 
 #### Step 2c: Are the contents of the file for your OpenCL implementation correct?
 
 If you see a file corresponding to your OpenCL implementation, and the file is readable, the next step is to ensure that the contents of the file are correct.
 The file for each OpenCL implementation should consist of a single line describing where to find the shared library for the OpenCL implementation.
-The contents of the file is passed as-is to `dlopen`.
+The contents of the file are passed as-is to `dlopen`.
 This means that the file should contain a single line, with no trailing whitespace, including newline characters.
 In most cases, the contents of the file will be a full path the shared library for an OpenCL implementation, for example:
 
@@ -216,7 +213,7 @@ If the shared library is not in your cache file, running `ldconfig` may add it, 
 ### Using `strace` to Troubleshoot
 
 The Linux `strace` utility can be very helpful to troubleshoot OpenCL issues.
-Since this utility can produce a lot of output, you may want to redirect the output to a file, and start by troubleshooting a simple test case, such as `clinfo`.
+Since this utility can produce a lot of output, you may want to redirect the output to a file, and start by troubleshooting a simple test case, such as by running `clinfo`.
 Here is an example command to run `strace` and redirect the output to a file:
 
 ````
