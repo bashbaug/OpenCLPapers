@@ -23,7 +23,7 @@ The application may then choose to run on any of the OpenCL implementations on t
 
 image::OpenCL-ICDs.png[]
 
-Note that because the application links against the ICD loader, the *Installable Client Driver* method allows an application to target many different OpenCL implementations, including those that were not even available when the application was developed.
+Note that because the application links against the ICD loader, the *Installable Client Driver* method allows an application to target many different OpenCL implementations, including those that were unavailable when the application was developed.
 
 OpenCL implementations do not need to support the *Installable Client Driver* interfaces to be conformant.
 Instead, the *Installable Client Driver* interface is described by the extension `cl_khr_icd`.
@@ -186,7 +186,7 @@ While it is very unlikely that an installer will setup permissions on the file i
 
 If you see a file corresponding to your OpenCL implementation, and the file is readable, the next step is to ensure that the contents of the file are correct.
 The file for each OpenCL implementation should consist of a single line describing where to find the shared library for the OpenCL implementation.
-The contents of the file is passed as-is to `dlopen`.
+The contents of the file are passed as-is to `dlopen`.
 This means that the file should contain a single line, with no trailing whitespace, including newline characters.
 In most cases, the contents of the file will be a full path the shared library for an OpenCL implementation, for example:
 
