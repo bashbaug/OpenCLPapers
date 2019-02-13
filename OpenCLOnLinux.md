@@ -208,10 +208,10 @@ This can work, but you may need to take additional steps to ensure that `dlopen`
 These additional steps are similar to the ones for `libOpenCL.so` described above.
 To summarize:
 
-. You may need to update your `ldconfig` cache file.
+1. You may need to update your `ldconfig` cache file.
 If the shared library is not in your cache file, running `ldconfig` may add it, but this will require root access.
-. You can use the `LD_LIBRARY_PATH` environment variable to specify the directory containing the shared library for the OpenCL implementation.
-. You can use the `LD_PRELOAD` environment variable to preload your the shared library for the OpenCL implementation (this is uncommon).
+1. You can use the `LD_LIBRARY_PATH` environment variable to specify the directory containing the shared library for the OpenCL implementation.
+1. You can use the `LD_PRELOAD` environment variable to preload your the shared library for the OpenCL implementation (this is uncommon).
 
 ### Using `strace` to Troubleshoot
 
