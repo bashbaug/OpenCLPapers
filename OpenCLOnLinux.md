@@ -211,7 +211,7 @@ To summarize:
 1. You may need to update your `ldconfig` cache file.
 If the shared library is not in your cache file, running `ldconfig` may add it, but this will require root access.
 1. You can use the `LD_LIBRARY_PATH` environment variable to specify the directory containing the shared library for the OpenCL implementation.
-1. You can use the `LD_PRELOAD` environment variable to preload your the shared library for the OpenCL implementation (this is uncommon).
+1. You can use the `LD_PRELOAD` environment variable to preload the shared library for the OpenCL implementation (this is uncommon).
 
 ### Using `strace` to Troubleshoot
 
